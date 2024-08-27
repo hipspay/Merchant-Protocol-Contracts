@@ -12,7 +12,7 @@ contract MerchantProtocolADM is Ownable {
 
     IERC20 public mtoToken;
     address public mtoControllerAccount;
-    uint256 public constant ESCROW_PERIOD = 5 days;
+    uint256 public constant ESCROW_PERIOD = 3 days; // For Digital Products (e.g., software, e-books). See Industry-Specific Escrow Periods.
     uint256 public constant PROTECTION_FEE = 5 * 10**18; // 5 MTO tokens
     uint256 public constant REPUTATION_THRESHOLD = 50; // Reputation threshold for automatic dispute resolution
     uint256 public constant SIX_MONTHS = 180 days;
