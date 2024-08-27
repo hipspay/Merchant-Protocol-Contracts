@@ -63,7 +63,7 @@ constructor(address _mtoToken, address _mtoControllerAccount)
 ### For MTO Controller
 
 1. `withdrawMTO()`
-   - Withdraws accumulated MTO tokens from the contract.
+   - Withdraws accumulated MTO tokens from the contract into a MTO staking contract.
 
 ## Reputation System
 
