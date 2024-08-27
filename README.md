@@ -1,6 +1,3 @@
-# Merchant-Protocol-Contracts
-Merchant Protocol Contracts
-
 # MerchantProtocolADM Contract User Manual
 
 ## Table of Contents
