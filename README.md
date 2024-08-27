@@ -7,7 +7,8 @@
 4. [Functions](#functions)
 5. [Reputation System](#reputation-system)
 6. [Automatic Dispute Management (ADM)](#automatic-dispute-management-adm)
-7. [Best Practices and Security Considerations](#best-practices-and-security-considerations)
+7. [Industry-Specific Escrow Periods](#industry-specific-escrow-periods)
+8. [Best Practices and Security Considerations](#best-practices-and-security-considerations)
 
 ## Introduction
 
@@ -82,6 +83,54 @@ When a dispute is raised:
 1. The contract checks the merchant's reputation.
 2. If the reputation is invalid or below the threshold, the transaction is automatically chargebacked.
 3. If the reputation is valid and above the threshold, the transaction proceeds in favor of the merchant.
+
+# Industry-Specific Escrow Periods
+
+Below is a list of industries with suggested escrow periods. These periods take into account the typical time needed for service delivery or product shipping and potential issues to surface:
+
+1. **Digital Products (e.g., software, e-books)**
+   - Escrow Period: 1-3 days
+   - Rationale: Immediate delivery, short time needed to verify functionality or content
+
+2. **Online Services (e.g., freelance work, consulting)**
+   - Escrow Period: 3-7 days
+   - Rationale: Time for service delivery and client review
+
+3. **Retail (Physical Products)**
+   - Escrow Period: 10-14 days
+   - Rationale: Allows for shipping time and product inspection
+
+4. **Handmade or Custom Products**
+   - Escrow Period: 14-21 days
+   - Rationale: Longer production and shipping times, time for customer to verify customizations
+
+5. **Real Estate**
+   - Escrow Period: 30-60 days
+   - Rationale: Time for property inspections, mortgage approval, and legal processes
+
+6. **Automotive**
+   - Escrow Period: 7-14 days
+   - Rationale: Time for vehicle inspection, test drive, and potential repairs
+
+7. **Travel and Hospitality**
+   - Escrow Period: 1-3 days after check-out date
+   - Rationale: Covers the duration of stay plus time for post-stay issues to surface
+
+8. **Event Planning Services**
+   - Escrow Period: 3-7 days after event date
+   - Rationale: Covers the event itself and time for post-event review
+
+9. **Home Improvement Services**
+   - Escrow Period: 14-30 days
+   - Rationale: Time for project completion and thorough inspection of work
+
+10. **Education and Online Courses**
+    - Escrow Period: 14-30 days
+    - Rationale: Time for student to access and evaluate course content
+
+Note: These are suggested periods and may need to be adjusted based on specific circumstances, local regulations, or company policies. It's important to clearly communicate the escrow period to both buyers and sellers to ensure transparency in the transaction process.
+
+
 
 ## Best Practices and Security Considerations
 
