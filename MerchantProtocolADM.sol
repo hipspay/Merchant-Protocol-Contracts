@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: Creative Commons Attribution-NonCommercial (CC BY-NC) License
-// Copyright 2024 - HIPS Payment Group Ltd (hips.com)
+// Copyright 2024 HIPS Payment Group Ltd (hips.com)
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract MerchantProtocolADM is Ownable {
-    using SafeMath for uint256;
-
-    IERC20 public mtoToken;
-    address public mtoControllerAccount;
+    IERC20 public immutable mtoToken;
+    address public immutable mtoControllerAccount;
     uint256 public constant ESCROW_PERIOD = 3 days; // For Digital Products (e.g., software, e-books). See Industry-Specific Escrow Periods.
     uint256 public constant PROTECTION_FEE = 5 * 10**18; // 5 MTO tokens
     uint256 public constant REPUTATION_THRESHOLD = 50; // Reputation threshold for automatic dispute resolution
@@ -45,16 +42,20 @@ contract MerchantProtocolADM is Ownable {
     mapping(bytes32 => Transaction) public transactions;
     mapping(address => MerchantReputation) public merchantReputations;
 
-    event FundsSent(bytes32 txId, address buyer, address merchant, uint256 amount, address tokenContract);
-    event ProtectionAdded(bytes32 txId);
-    event Disputed(bytes32 txId);
-    event Withdrawn(bytes32 txId);
-    event Chargebacked(bytes32 txId);
-    event ReputationUpdated(address merchant, uint256 newReputation, bool isValid);
+    event FundsSent(bytes32 indexed txId, address indexed buyer, address indexed merchant, uint256 amount, address tokenContract);
+    event ProtectionAdded(bytes32 indexed txId);
+    event Disputed(bytes32 indexed txId);
+    event Withdrawn(bytes32 indexed txId);
+    event Chargebacked(bytes32 indexed txId);
+    event ReputationUpdated(address indexed merchant, uint256 newReputation, bool isValid);
 
-    constructor(address _mtoToken, address _mtoControllerAccount) {
+    constructor(address _mtoToken, address _mtoControllerAccount) Ownable(msg.sender) {
         mtoToken = IERC20(_mtoToken);
         mtoControllerAccount = _mtoControllerAccount;
+    }
+
+    function getEscrowPeriod() public pure returns (uint256) {
+        return ESCROW_PERIOD;
     }
 
     function sendFunds(address merchant, address tokenContract, uint256 amount) external returns (bytes32) {
@@ -67,8 +68,8 @@ contract MerchantProtocolADM is Ownable {
         if (rep.creationTimestamp == 0) {
             rep.creationTimestamp = block.timestamp;
         }
-        rep.totalTransactions = rep.totalTransactions.add(1);
-        rep.totalAmount = rep.totalAmount.add(amount);
+        rep.totalTransactions++;
+        rep.totalAmount += amount;
         rep.lastUpdateTimestamp = block.timestamp;
         
         emit FundsSent(txId, msg.sender, merchant, amount, tokenContract);
@@ -89,61 +90,62 @@ contract MerchantProtocolADM is Ownable {
     }
 
     function withdraw(bytes32 txId) external {
-        Transaction storage tx = transactions[txId];
-        require(tx.merchant == msg.sender, "Not the merchant");
-        require(tx.status == TxStatus.Protected, "Invalid status");
-        require(block.timestamp >= tx.timestamp + ESCROW_PERIOD, "Escrow period not ended");
+        Transaction storage txn = transactions[txId];
+        require(txn.merchant == msg.sender, "Not the merchant");
+        require(txn.status == TxStatus.Protected, "Invalid status");
+        require(block.timestamp >= txn.timestamp + ESCROW_PERIOD, "Escrow period not ended");
 
-        tx.status = TxStatus.Withdrawn;
-        IERC20(tx.tokenContract).transfer(tx.merchant, tx.amount);
+        txn.status = TxStatus.Withdrawn;
+        IERC20(txn.tokenContract).transfer(txn.merchant, txn.amount);
         
-        MerchantReputation storage rep = merchantReputations[tx.merchant];
-        rep.successfulTransactions = rep.successfulTransactions.add(1);
-        rep.successfulAmount = rep.successfulAmount.add(tx.amount);
+        MerchantReputation storage rep = merchantReputations[txn.merchant];
+        rep.successfulTransactions++;
+        rep.successfulAmount += txn.amount;
         rep.lastUpdateTimestamp = block.timestamp;
         
-        updateReputation(tx.merchant);
+        updateReputation(txn.merchant);
         
         emit Withdrawn(txId);
     }
 
     function dispute(bytes32 txId) external {
-        Transaction storage tx = transactions[txId];
-        require(tx.buyer == msg.sender, "Not the buyer");
-        require(tx.status == TxStatus.Protected, "Invalid status");
-        require(block.timestamp < tx.timestamp + ESCROW_PERIOD, "Escrow period ended");
+        Transaction storage txn = transactions[txId];
+        require(txn.buyer == msg.sender, "Not the buyer");
+        require(txn.status == TxStatus.Protected, "Invalid status");
+        require(block.timestamp < txn.timestamp + ESCROW_PERIOD, "Escrow period ended");
 
-        tx.status = TxStatus.Disputed;
+        txn.status = TxStatus.Disputed;
         
-        MerchantReputation storage rep = merchantReputations[tx.merchant];
-        rep.disputedTransactions = rep.disputedTransactions.add(1);
-        rep.disputedAmount = rep.disputedAmount.add(tx.amount);
+        MerchantReputation storage rep = merchantReputations[txn.merchant];
+        rep.disputedTransactions++;
+        rep.disputedAmount += txn.amount;
         rep.lastUpdateTimestamp = block.timestamp;
         
         emit Disputed(txId);
         
         // Implement ADM logic
-        (uint256 merchantReputation, bool isValid) = calculateReputation(tx.merchant);
+        (uint256 merchantReputation, bool isValid) = calculateReputation(txn.merchant);
         if (!isValid || merchantReputation < REPUTATION_THRESHOLD) {
             _chargeback(txId);
         } else {
-            tx.status = TxStatus.Withdrawn;
-            IERC20(tx.tokenContract).transfer(tx.merchant, tx.amount);
-            rep.successfulTransactions = rep.successfulTransactions.add(1);
-            rep.successfulAmount = rep.successfulAmount.add(tx.amount);
+            txn.status = TxStatus.Withdrawn;
+            IERC20(txn.tokenContract).transfer(txn.merchant, txn.amount);
+            rep.successfulTransactions++;
+            rep.successfulAmount += txn.amount;
         }
         
-        updateReputation(tx.merchant);
+        updateReputation(txn.merchant);
     }
-
     function _chargeback(bytes32 txId) internal {
-        Transaction storage tx = transactions[txId];
-        tx.status = TxStatus.Chargebacked;
-        IERC20(tx.tokenContract).transfer(tx.buyer, tx.amount);
+        Transaction storage txn = transactions[txId];
+        require(txn.status == TxStatus.Disputed, "Invalid status"); // Adding a check
+        txn.status = TxStatus.Chargebacked;
+        bool transferSuccess = IERC20(txn.tokenContract).transfer(txn.buyer, txn.amount);
+        require(transferSuccess, "Transfer failed"); // Check if transfer was successful
         
-        MerchantReputation storage rep = merchantReputations[tx.merchant];
-        rep.chargebackedTransactions = rep.chargebackedTransactions.add(1);
-        rep.chargebackedAmount = rep.chargebackedAmount.add(tx.amount);
+        MerchantReputation storage rep = merchantReputations[txn.merchant];
+        rep.chargebackedTransactions++;
+        rep.chargebackedAmount += txn.amount;
         rep.lastUpdateTimestamp = block.timestamp;
         
         emit Chargebacked(txId);
@@ -155,26 +157,26 @@ contract MerchantProtocolADM is Ownable {
             return (0, false);
         }
         
-        uint256 accountAge = block.timestamp.sub(rep.creationTimestamp);
-        uint256 timeSinceLastUpdate = block.timestamp.sub(rep.lastUpdateTimestamp);
+        uint256 accountAge = block.timestamp - rep.creationTimestamp;
+        uint256 timeSinceLastUpdate = block.timestamp - rep.lastUpdateTimestamp;
         
-        uint256 successRate = rep.successfulAmount.mul(100).div(rep.totalAmount);
-        uint256 disputeRate = rep.disputedAmount.mul(100).div(rep.totalAmount);
-        uint256 chargebackRate = rep.chargebackedAmount.mul(100).div(rep.totalAmount);
+        uint256 successRate = (rep.successfulAmount * 100) / rep.totalAmount;
+        uint256 disputeRate = (rep.disputedAmount * 100) / rep.totalAmount;
+        uint256 chargebackRate = (rep.chargebackedAmount * 100) / rep.totalAmount;
         
         // Apply time decay factor
-        uint256 decayFactor = timeSinceLastUpdate >= SIX_MONTHS ? 50 : 100 - (timeSinceLastUpdate.mul(50).div(SIX_MONTHS));
+        uint256 decayFactor = timeSinceLastUpdate >= SIX_MONTHS ? 50 : 100 - ((timeSinceLastUpdate * 50) / SIX_MONTHS);
         
         // Calculate base reputation
-        uint256 baseReputation = successRate.sub(disputeRate).sub(chargebackRate.mul(2));
+        uint256 baseReputation = successRate - disputeRate - (chargebackRate * 2);
         
         // Apply decay factor
-        uint256 decayedReputation = baseReputation.mul(decayFactor).div(100);
+        uint256 decayedReputation = (baseReputation * decayFactor) / 100;
         
         // Apply account age bonus (max 20% bonus for accounts older than 1 year)
-        uint256 ageBonus = accountAge >= 365 days ? 20 : accountAge.mul(20).div(365 days);
+        uint256 ageBonus = accountAge >= 365 days ? 20 : (accountAge * 20) / 365 days;
         
-        reputation = decayedReputation.add(ageBonus);
+        reputation = decayedReputation + ageBonus;
         isValid = true;
         
         return (reputation, isValid);
@@ -191,4 +193,3 @@ contract MerchantProtocolADM is Ownable {
         require(mtoToken.transfer(mtoControllerAccount, balance), "Transfer failed");
     }
 }
-
