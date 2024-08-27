@@ -23,6 +23,10 @@ To deploy the contract, you need:
 Deploy the contract by calling the constructor with these two parameters:
 
 ```solidity
+
+_mtoToken = 0xE66b3AA360bB78468c00Bebe163630269DB3324F
+_mtoControllerAccount = 0x4671d5e6821EaCfA0F0d16a5Fd4D60c804E7d4e0
+
 constructor(address _mtoToken, address _mtoControllerAccount)
 ```
 
