@@ -14,6 +14,10 @@
 
 The MerchantProtocolADM contract is a sophisticated escrow system designed to facilitate secure transactions between buyers and merchants. It incorporates an Automatic Dispute Management (ADM) system and a reputation mechanism to ensure fair trade practices.
 
+A demo react app to interact with the contract can be found here:
+https://github.com/hipspay/Merchant-Protocol-ADM-Interaction
+
+
 ## Contract Deployment
 
 The contract is deployed at:
