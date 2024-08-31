@@ -16,6 +16,9 @@ The MerchantProtocolADM contract is a sophisticated escrow system designed to fa
 
 ## Contract Deployment
 
+The contract is deployed at:
+https://etherscan.io/address/0x6B061bAe16E702c76C0D0537c8bf1928F2D7D2ec
+
 To deploy the contract, you need:
 - The address of the MTO token contract
 - The address of the MTO controller account
